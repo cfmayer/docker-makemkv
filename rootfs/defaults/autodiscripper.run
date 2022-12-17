@@ -146,6 +146,17 @@ process_makemkvcon_output() {
     done
 }
 
+send_pushover() {
+    MSG="$1"
+
+    wget --no-check-certificate --quiet \
+        --method POST \
+        --timeout=0 \
+        --header '' \
+        --body-data "user=$PUSHOVER_USER&message=$MSG&token=$PUSHOVER_APITOKEN" \
+        'https://api.pushover.net/1/messages.json'
+}
+
 process_disc() {
     SRC="$1"
     LABEL="${2:-$(date +%Y-%m-%d-%H-%M-%S)}"
@@ -255,11 +266,14 @@ while true; do
             else
                 # Process disc.
                 log "Starting disc rip..."
+                send_pushover "Ripping $DRV_LABEL"
                 process_disc "disc:$DRV_ID" "$DRV_LABEL" "$(expr \( $DRV_FLAGS / 4 \) % 2)"
                 if [ "$?" -eq 0 ]; then
                     log "Disc rip terminated successfully."
+                    send_pushover "$DRV_LABEL rip complete"
                 else
                     log "Disc rip terminated with failure."
+                    send_pushover "$DRV_LABEL rip failed"
                 fi
                 if [ "${AUTO_DISC_RIPPER_EJECT:-0}" -eq 1 ]; then
                     EJECT_TRIES=0
